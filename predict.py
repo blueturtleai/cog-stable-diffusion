@@ -12,7 +12,8 @@ from diffusers import (
 )
 from PIL import Image
 from cog import BasePredictor, Input, Path
-
+import base64
+from io import BytesIO
 
 MODEL_CACHE = "diffusers-cache"
 
