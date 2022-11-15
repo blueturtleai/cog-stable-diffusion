@@ -113,7 +113,7 @@ class Predictor(BasePredictor):
                 raise ValueError("mask was provided without init_image")
             pipe = self.inpaint_pipe
             init_image = Image.open(BytesIO(base64.b64decode(init_image))).convert("RGB")
-            red, green, blue, mask = init_image.split()
+            red, green, blue, mask = mask.split()
             mask = PIL.ImageOps.invert(mask).resize(init_image.size)
             extra_kwargs = {
                 "mask_image": mask,
