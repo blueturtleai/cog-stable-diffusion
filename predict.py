@@ -14,6 +14,8 @@ from PIL import Image
 from cog import BasePredictor, Input, Path
 import base64
 from io import BytesIO
+import PIL
+import PIL.ImageOps
 
 MODEL_CACHE = "diffusers-cache"
 
@@ -111,7 +113,8 @@ class Predictor(BasePredictor):
                 raise ValueError("mask was provided without init_image")
             pipe = self.inpaint_pipe
             init_image = Image.open(BytesIO(base64.b64decode(init_image))).convert("RGB")
-            mask = Image.open(BytesIO(base64.b64decode(mask))).convert("RGB").resize(init_image.size)
+            red, green, blue, mask = init_image.split()
+            mask = PIL.ImageOps.invert(mask).resize(init_image.size)
             extra_kwargs = {
                 "mask_image": mask,
                 "init_image": init_image,
