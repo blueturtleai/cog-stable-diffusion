@@ -11,6 +11,9 @@ from diffusers import (
     StableDiffusionInpaintPipelineLegacy,
 )
 from PIL import Image
+import PIL.ImageOps
+import base64
+from io import BytesIO
 from cog import BasePredictor, Input, Path
 
 
@@ -61,11 +64,11 @@ class Predictor(BasePredictor):
             choices=[128, 256, 384, 448, 512, 576, 640, 704, 768, 832, 896, 960, 1024],
             default=512,
         ),
-        init_image: Path = Input(
+        init_image: str = Input(
             description="Initial image to generate variations of. Will be resized to the specified width and height",
             default=None,
         ),
-        mask: Path = Input(
+        mask: str = Input(
             description="Black and white image to use as mask for inpainting over init_image. Black pixels are inpainted and white pixels are preserved. Tends to work better with prompt strength of 0.5-0.7. Consider using https://replicate.com/andreasjansson/stable-diffusion-inpainting instead.",
             default=None,
         ),
@@ -109,21 +112,27 @@ class Predictor(BasePredictor):
             if not init_image:
                 raise ValueError("mask was provided without init_image")
             pipe = self.inpaint_pipe
-            init_image = Image.open(init_image).convert("RGB")
+            init_image = Image.open(BytesIO(base64.b64decode(init_image))).convert("RGB")
+ 
+            mask = Image.open(BytesIO(base64.b64decode(mask)))
+            red, green, blue, mask = mask.split()
+            mask = PIL.ImageOps.invert(mask)
+            
             extra_kwargs = {
-                "mask_image": Image.open(mask).convert("RGB").resize(init_image.size),
+                "mask_image": mask,
                 "init_image": init_image,
                 "strength": prompt_strength,
             }
         elif init_image:
             pipe = self.img2img_pipe
+            init_image = Image.open(BytesIO(base64.b64decode(init_image))).convert("RGB")
             extra_kwargs = {
-                "init_image": Image.open(init_image).convert("RGB"),
+                "init_image": init_image,
                 "strength": prompt_strength,
             }
         else:
             pipe = self.txt2img_pipe
-
+            
         pipe.scheduler = make_scheduler(scheduler)
 
         generator = torch.Generator("cuda").manual_seed(seed)
